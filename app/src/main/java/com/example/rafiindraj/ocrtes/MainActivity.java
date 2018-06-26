@@ -4,9 +4,11 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -17,6 +19,7 @@ import android.os.Bundle;
 import android.system.ErrnoException;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,9 +34,11 @@ import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
 import com.google.api.services.vision.v1.model.Feature;
 import com.google.api.services.vision.v1.model.Image;
 import com.google.api.services.vision.v1.model.TextAnnotation;
+import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.apache.commons.io.IOUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -47,15 +52,21 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     Vision vision;
     Button loadImage;
+    Uri image;
+
+    private CropImageView mCropImageView;
     private ImageView imageView;
     private Uri mCropImageUri;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ((ImageView)findViewById(R.id.photo_view))
-                .setImageResource(R.drawable.tes1);
+//        ((ImageView)findViewById(R.id.photo_view))
+//                .setImageResource(R.drawable.tes1);
         Vision.Builder visionBuilder = new Vision.Builder(
                 new NetHttpTransport(),
                 new AndroidJsonFactory(),
@@ -66,16 +77,15 @@ public class MainActivity extends AppCompatActivity {
 
         vision = visionBuilder.build();
         loadImage = (Button) findViewById(R.id.btn_loadImage);
-
+//        imageView = (ImageView)findViewById(R.id.photo_view);
+        mCropImageView = (CropImageView) findViewById(R.id.CropImageView);
 //        ocr();
 
 
     }
-
     public void onClickLoadImage(View view){
         startActivityForResult(getPickImageChooserIntent(), 200);
     }
-
     private Uri getCaptureImageOutputUri() {
         Uri outputFileUri = null;
         File getImage = getExternalCacheDir();
@@ -134,7 +144,6 @@ public class MainActivity extends AppCompatActivity {
 
         return chooserIntent;
     }
-
     public Uri getPickImageResultUri(Intent data) {
         boolean isCamera = true;
         if (data != null && data.getData() != null) {
@@ -143,11 +152,11 @@ public class MainActivity extends AppCompatActivity {
         }
         return isCamera ? getCaptureImageOutputUri() : data.getData();
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
             Uri imageUri = getPickImageResultUri(data);
-
             // For API >= 23 we need to check specifically that we have permissions to read external storage,
             // but we don't know if we need to for the URI so the simplest is to try open the stream and see if we get error.
             boolean requirePermissions = false;
@@ -156,17 +165,19 @@ public class MainActivity extends AppCompatActivity {
                     isUriRequiresPermissions(imageUri)) {
 
                 // request permissions and handle the result in onRequestPermissionsResult()
-                mCropImageUri = imageUri;
                 requirePermissions = true;
+                mCropImageUri = imageUri;
                 requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
             }
 
             if (!requirePermissions) {
-                imageView.setImageURI(imageUri);
+                mCropImageView.setImageUriAsync(imageUri);
             }
+
+//            image = imageUri;
+//            ocr();
         }
     }
-
     public boolean isUriRequiresPermissions(Uri uri) {
         try {
             ContentResolver resolver = getContentResolver();
@@ -182,15 +193,34 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    public void onClickSave(View view){
 
-    public void ocr(){
+    }
+
+    public void onCropImageClick(View view) {
+        Bitmap cropped = mCropImageView.getCroppedImage(500, 500);
+        if (cropped != null)
+            mCropImageView.setImageBitmap(cropped);
+
+
+        ocr(cropped);
+    }
+
+
+
+    public void ocr(final Bitmap cropped){
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    InputStream inputStream = getResources().openRawResource(R.raw.tes1);
-                    byte[] photoData = IOUtils.toByteArray(inputStream);
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    cropped.compress(Bitmap.CompressFormat.PNG, 100, stream);
+
+//                    InputStream inputStream = getContentResolver().openInputStream(uri);
+                    byte[] photoData = stream.toByteArray();
                     Image inputImage = new Image();
+
+
                     inputImage.encodeContent(photoData);
                     Feature desiredFeature = new Feature();
                     desiredFeature.setType("TEXT_DETECTION");
@@ -211,9 +241,11 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(getApplicationContext(),
-                                    text.getText(),Toast.LENGTH_LONG).show();
+//                            Toast.makeText(getApplicationContext(),
+//                                    text.getText(),Toast.LENGTH_LONG).show();
                             TextView teks = (TextView) findViewById(R.id.textView);
+                            EditText editText = (EditText)findViewById(R.id.editText);
+                            editText.setText(text.getText());
                             teks.setText(text.getText());
                         }
                     });
