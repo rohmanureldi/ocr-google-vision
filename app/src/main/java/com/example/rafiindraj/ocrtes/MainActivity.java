@@ -42,7 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-//TASTISTUS
+//TASTISTUS kontol buntus
 
 public class MainActivity extends AppCompatActivity {
     Vision vision;
