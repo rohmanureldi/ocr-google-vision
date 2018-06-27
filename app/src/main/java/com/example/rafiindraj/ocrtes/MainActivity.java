@@ -102,6 +102,33 @@ public class MainActivity extends AppCompatActivity {
     public void onClickLoadImage(View view){
         startActivityForResult(getPickImageChooserIntent(), 200);
     }
+    public void onClickSave(View view){
+        String x = editText.getText().toString();
+        String[] y=x.split("\n");
+        ArrayList key = new ArrayList<>();
+        ArrayList value = new ArrayList<>();
+        for(int i=0;i<y.length;i++){
+            String [] z = y[i].split(":");
+            key.add(z[0]);
+            value.add(z[1]);
+        }
+        try {
+            data = jsonFormattedString(key,value);
+            new SendRequest().execute();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+    }
+    public void onCropImageClick(View view) {
+        Bitmap cropped = mCropImageView.getCroppedImage(500, 500);
+        if (cropped != null)
+            mCropImageView.setImageBitmap(cropped);
+
+
+        ocr(cropped);
+    }
+
     private Uri getCaptureImageOutputUri() {
         Uri outputFileUri = null;
         File getImage = getExternalCacheDir();
@@ -209,25 +236,8 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    public void onClickSave(View view){
-        String x = editText.getText().toString();
-        String[] y=x.split("\n");
-        ArrayList key = new ArrayList<>();
-        ArrayList value = new ArrayList<>();
-        for(int i=0;i<y.length;i++){
-            String [] z = y[i].split(":");
-            key.add(z[0]);
-            value.add(z[1]);
-        }
-        try {
-            data = jsonFormattedString(key,value);
-            new SendRequest().execute();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
 
-    }
-
+    // Converting string from scanned text to JSON format
     public String jsonFormattedString(ArrayList key, ArrayList value) throws JSONException {
 
         String jsonString="{";
@@ -245,15 +255,9 @@ public class MainActivity extends AppCompatActivity {
         return(jsonString);
     }
 
-    public void onCropImageClick(View view) {
-        Bitmap cropped = mCropImageView.getCroppedImage(500, 500);
-        if (cropped != null)
-            mCropImageView.setImageBitmap(cropped);
 
 
-        ocr(cropped);
-    }
-
+    //Doing OCR
     public void ocr(final Bitmap cropped){
         AsyncTask.execute(new Runnable() {
             @Override
@@ -301,9 +305,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
-
-
+    //Sending JSON to Database
     public class SendRequest extends AsyncTask<String, Void, String> {
 
 
@@ -381,7 +383,6 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
-
     public String getPostDataString(JSONObject params) throws Exception {
 
         StringBuilder result = new StringBuilder();
