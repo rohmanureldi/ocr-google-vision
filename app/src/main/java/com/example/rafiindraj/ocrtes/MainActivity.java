@@ -17,6 +17,7 @@ import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.system.ErrnoException;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -37,14 +38,27 @@ import com.google.api.services.vision.v1.model.TextAnnotation;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.apache.commons.io.IOUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
 
 
 //TASTISTUS kontol buntus
@@ -53,7 +67,9 @@ public class MainActivity extends AppCompatActivity {
     Vision vision;
     Button loadImage;
     Uri image;
-
+    EditText editText;
+    String data;
+    String id= "1uyDMRemXWwCOvMexRSnigOw8T9XpFB-BRm-KFxHlMnY";
     private CropImageView mCropImageView;
     private ImageView imageView;
     private Uri mCropImageUri;
@@ -77,9 +93,9 @@ public class MainActivity extends AppCompatActivity {
 
         vision = visionBuilder.build();
         loadImage = (Button) findViewById(R.id.btn_loadImage);
-//        imageView = (ImageView)findViewById(R.id.photo_view);
         mCropImageView = (CropImageView) findViewById(R.id.CropImageView);
-//        ocr();
+        editText = (EditText)findViewById(R.id.editText);
+        JSONObject jsonObject=new JSONObject();
 
 
     }
@@ -194,7 +210,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onClickSave(View view){
+        String x = editText.getText().toString();
+        String[] y=x.split("\n");
+        ArrayList key = new ArrayList<>();
+        ArrayList value = new ArrayList<>();
+        for(int i=0;i<y.length;i++){
+            String [] z = y[i].split(":");
+            key.add(z[0]);
+            value.add(z[1]);
+        }
+        try {
+            data = jsonFormattedString(key,value);
+            new SendRequest().execute();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
+    }
+
+    public String jsonFormattedString(ArrayList key, ArrayList value) throws JSONException {
+
+        String jsonString="{";
+        for(int i=0;i<key.size();i++){
+            if(i!=key.size()-1){
+                jsonString=jsonString+'"'+key.get(i)+'"'+':'+'"'+value.get(i)+'"'+",";
+            }else{
+                jsonString=jsonString+'"'+key.get(i)+'"'+':'+'"'+value.get(i)+'"';
+            }
+
+        }
+        jsonString=jsonString+"}";
+
+
+        return(jsonString);
     }
 
     public void onCropImageClick(View view) {
@@ -205,8 +253,6 @@ public class MainActivity extends AppCompatActivity {
 
         ocr(cropped);
     }
-
-
 
     public void ocr(final Bitmap cropped){
         AsyncTask.execute(new Runnable() {
@@ -243,18 +289,121 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
 //                            Toast.makeText(getApplicationContext(),
 //                                    text.getText(),Toast.LENGTH_LONG).show();
-                            TextView teks = (TextView) findViewById(R.id.textView);
-                            EditText editText = (EditText)findViewById(R.id.editText);
+
                             editText.setText(text.getText());
-                            teks.setText(text.getText());
                         }
                     });
-                    System.out.println("konsdmkasdnasld ");
                 } catch(Exception e) {
                     System.out.print(e.getMessage());
                 }
             }
 
         });
+    }
+
+
+
+
+    public class SendRequest extends AsyncTask<String, Void, String> {
+
+
+        protected void onPreExecute(){}
+
+        protected String doInBackground(String... arg0) {
+
+            try{
+                //Change your web app deployed URL or u can use this for attributes (name, country)
+                URL url = new URL("https://script.google.com/macros/s/AKfycbzHOCsnQpb4e2o4ZuUi6khitbtGSEt_LB5IBUfNXUtm28DMoS0T/exec");
+
+                JSONObject postDataParams = new JSONObject();
+
+                //int i;
+                //for(i=1;i<=70;i++)
+
+
+                //    String usn = Integer.toString(i);
+
+                String id= "1uyDMRemXWwCOvMexRSnigOw8T9XpFB-BRm-KFxHlMnY";
+
+                postDataParams.put("data",data);
+                postDataParams.put("id",id);
+
+
+                Log.e("params",postDataParams.toString());
+
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setReadTimeout(15000 /* milliseconds */);
+                conn.setConnectTimeout(15000 /* milliseconds */);
+                conn.setRequestMethod("POST");
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(os, "UTF-8"));
+                writer.write(getPostDataString(postDataParams));
+
+                writer.flush();
+                writer.close();
+                os.close();
+
+                int responseCode=conn.getResponseCode();
+
+                if (responseCode == HttpsURLConnection.HTTP_OK) {
+
+                    BufferedReader in=new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuffer sb = new StringBuffer("");
+                    String line="";
+
+                    while((line = in.readLine()) != null) {
+
+                        sb.append(line);
+                        break;
+                    }
+
+                    in.close();
+                    return sb.toString();
+
+                }
+                else {
+                    return new String("false : "+responseCode);
+                }
+            }
+            catch(Exception e){
+                return new String("Exception: " + e.getMessage());
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(getApplicationContext(), result,
+                    Toast.LENGTH_LONG).show();
+
+        }
+    }
+
+    public String getPostDataString(JSONObject params) throws Exception {
+
+        StringBuilder result = new StringBuilder();
+        boolean first = true;
+
+        Iterator<String> itr = params.keys();
+
+        while(itr.hasNext()){
+
+            String key= itr.next();
+            Object value = params.get(key);
+
+            if (first)
+                first = false;
+            else
+                result.append("&");
+
+            result.append(URLEncoder.encode(key, "UTF-8"));
+            result.append("=");
+            result.append(URLEncoder.encode(value.toString(), "UTF-8"));
+
+        }
+        return result.toString();
     }
 }
