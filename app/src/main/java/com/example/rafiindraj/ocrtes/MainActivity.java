@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayList key = new ArrayList<>();
         ArrayList value = new ArrayList<>();
         for(int i=0;i<y.length;i++){
-            String [] z = y[i].split(":");
+            String [] z = y[i].split(":|=");
             key.add(z[0]);
             value.add(z[1]);
         }
