@@ -18,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.system.ErrnoException;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -25,6 +26,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.text.TextBlock;
+import com.google.android.gms.vision.text.TextRecognizer;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.vision.v1.Vision;
@@ -61,7 +65,6 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 
 
-//TASTISTUS kontol buntus
 
 public class MainActivity extends AppCompatActivity {
     Vision vision;
@@ -70,10 +73,11 @@ public class MainActivity extends AppCompatActivity {
     EditText editText;
     String data;
     String id= "1uyDMRemXWwCOvMexRSnigOw8T9XpFB-BRm-KFxHlMnY";
+    Button rotate;
     private CropImageView mCropImageView;
     private ImageView imageView;
     private Uri mCropImageUri;
-
+    TextRecognizer textRecognizer;
 
 
     @Override
@@ -81,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        ((ImageView)findViewById(R.id.photo_view))
-//                .setImageResource(R.drawable.tes1);
         Vision.Builder visionBuilder = new Vision.Builder(
                 new NetHttpTransport(),
                 new AndroidJsonFactory(),
@@ -95,12 +97,20 @@ public class MainActivity extends AppCompatActivity {
         loadImage = (Button) findViewById(R.id.btn_loadImage);
         mCropImageView = (CropImageView) findViewById(R.id.CropImageView);
         editText = (EditText)findViewById(R.id.editText);
+        rotate = (Button)findViewById(R.id.btn_rotate);
         JSONObject jsonObject=new JSONObject();
+
+
+        textRecognizer = new TextRecognizer.Builder(this).build();
 
 
     }
     public void onClickLoadImage(View view){
         startActivityForResult(getPickImageChooserIntent(), 200);
+    }
+
+    public void onClickRotate(View view){
+        mCropImageView.rotateImage(90);
     }
     public void onClickSave(View view){
         String x = editText.getText().toString();
@@ -125,8 +135,16 @@ public class MainActivity extends AppCompatActivity {
         if (cropped != null)
             mCropImageView.setImageBitmap(cropped);
 
+        Frame frame = new Frame.Builder().setBitmap(cropped).build();
+        SparseArray<TextBlock> item = textRecognizer.detect(frame);
+        StringBuilder stringBuilder=new StringBuilder();
 
-        ocr(cropped);
+        for(int i=0;i<item.size();i++){
+            stringBuilder.append(item.valueAt(i).getValue());
+        }
+        editText.setText(stringBuilder.toString());
+
+//        ocr(cropped);
     }
 
     private Uri getCaptureImageOutputUri() {
@@ -199,15 +217,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
+            imageView.destroyDrawingCache();
             Uri imageUri = getPickImageResultUri(data);
-            // For API >= 23 we need to check specifically that we have permissions to read external storage,
-            // but we don't know if we need to for the URI so the simplest is to try open the stream and see if we get error.
+
             boolean requirePermissions = false;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                     checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED &&
                     isUriRequiresPermissions(imageUri)) {
 
-                // request permissions and handle the result in onRequestPermissionsResult()
                 requirePermissions = true;
                 mCropImageUri = imageUri;
                 requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
@@ -217,8 +234,6 @@ public class MainActivity extends AppCompatActivity {
                 mCropImageView.setImageUriAsync(imageUri);
             }
 
-//            image = imageUri;
-//            ocr();
         }
     }
     public boolean isUriRequiresPermissions(Uri uri) {
@@ -258,52 +273,52 @@ public class MainActivity extends AppCompatActivity {
 
 
     //Doing OCR
-    public void ocr(final Bitmap cropped){
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    cropped.compress(Bitmap.CompressFormat.PNG, 100, stream);
-
-//                    InputStream inputStream = getContentResolver().openInputStream(uri);
-                    byte[] photoData = stream.toByteArray();
-                    Image inputImage = new Image();
-
-
-                    inputImage.encodeContent(photoData);
-                    Feature desiredFeature = new Feature();
-                    desiredFeature.setType("TEXT_DETECTION");
-                    AnnotateImageRequest request = new AnnotateImageRequest();
-                    request.setImage(inputImage);
-                    request.setFeatures(Arrays.asList(desiredFeature));
-                    BatchAnnotateImagesRequest batchRequest = new BatchAnnotateImagesRequest();
-                    batchRequest.setRequests(Arrays.asList(request));
-                    BatchAnnotateImagesResponse batchResponse =
-                            vision.images().annotate(batchRequest).execute();
-
-
-
-                    final TextAnnotation text = batchResponse.getResponses()
-                            .get(0).getFullTextAnnotation();
-
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-//                            Toast.makeText(getApplicationContext(),
-//                                    text.getText(),Toast.LENGTH_LONG).show();
-
-                            editText.setText(text.getText());
-                        }
-                    });
-                } catch(Exception e) {
-                    System.out.print(e.getMessage());
-                }
-            }
-
-        });
-    }
+//    public void ocr(final Bitmap cropped){
+//        AsyncTask.execute(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                    cropped.compress(Bitmap.CompressFormat.PNG, 100, stream);
+//
+////                    InputStream inputStream = getContentResolver().openInputStream(uri);
+//                    byte[] photoData = stream.toByteArray();
+//                    Image inputImage = new Image();
+//
+//
+//                    inputImage.encodeContent(photoData);
+//                    Feature desiredFeature = new Feature();
+//                    desiredFeature.setType("TEXT_DETECTION");
+//                    AnnotateImageRequest request = new AnnotateImageRequest();
+//                    request.setImage(inputImage);
+//                    request.setFeatures(Arrays.asList(desiredFeature));
+//                    BatchAnnotateImagesRequest batchRequest = new BatchAnnotateImagesRequest();
+//                    batchRequest.setRequests(Arrays.asList(request));
+//                    BatchAnnotateImagesResponse batchResponse =
+//                            vision.images().annotate(batchRequest).execute();
+//
+//
+//
+//                    final TextAnnotation text = batchResponse.getResponses()
+//                            .get(0).getFullTextAnnotation();
+//
+//
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+////                            Toast.makeText(getApplicationContext(),
+////                                    text.getText(),Toast.LENGTH_LONG).show();
+//
+//                            editText.setText(text.getText());
+//                        }
+//                    });
+//                } catch(Exception e) {
+//                    System.out.print(e.getMessage());
+//                }
+//            }
+//
+//        });
+//    }
 
     //Sending JSON to Database
     public class SendRequest extends AsyncTask<String, Void, String> {

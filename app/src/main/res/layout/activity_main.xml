@@ -81,9 +81,10 @@
         android:text="Crop"
         app:layout_constraintBottom_toTopOf="@+id/editText"
         app:layout_constraintEnd_toEndOf="@+id/CropImageView"
+        app:layout_constraintHorizontal_bias="0.861"
         app:layout_constraintStart_toStartOf="@+id/CropImageView"
         app:layout_constraintTop_toBottomOf="@+id/CropImageView"
-        app:layout_constraintVertical_bias="0.238" />
+        app:layout_constraintVertical_bias="0.384" />
 
     <EditText
         android:id="@+id/editText"
@@ -91,7 +92,6 @@
         android:layout_height="139dp"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:ems="10"
         android:inputType="text|textMultiLine"
@@ -100,7 +100,22 @@
         android:textAlignment="center"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/btn_crop"
-        app:layout_constraintStart_toStartOf="@+id/btn_crop"
+        app:layout_constraintStart_toStartOf="@+id/btn_rotate"
+        app:layout_constraintTop_toBottomOf="@+id/CropImageView" />
+
+    <Button
+        android:id="@+id/btn_rotate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="Rotate"
+        android:onClick="onClickRotate"
+        app:layout_constraintBottom_toTopOf="@+id/editText"
+        app:layout_constraintEnd_toStartOf="@+id/btn_crop"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/CropImageView" />
 
 </android.support.constraint.ConstraintLayout>
